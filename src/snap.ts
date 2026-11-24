@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { chromium, type Browser, type Page } from "playwright-core";
+import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
 import { Assets } from "./assets.js";
 import { atClock } from "./clock.js";
 import type { Device, KanvasConfig, Scene, Seed, Step } from "./config.js";
@@ -26,11 +26,14 @@ export interface SnapOptions {
   log?: (line: string) => void;
 }
 
-export function launch(browser = "chrome"): Promise<Browser> {
-  if (browser === "chrome") return chromium.launch({ channel: "chrome", headless: true });
-  if (browser === "chromium") return chromium.launch({ headless: true });
-  return chromium.launch({ executablePath: browser, headless: true });
+export function launch(browser = "chrome", headless = true): Promise<Browser> {
+  if (browser === "chrome") return chromium.launch({ channel: "chrome", headless });
+  if (browser === "chromium") return chromium.launch({ headless });
+  return chromium.launch({ executablePath: browser, headless });
 }
+
+/** a picture small enough for a whole board of them: about this wide */
+const THUMB_WIDTH = 360;
 
 const STEP_MS = 10000;
 
@@ -84,16 +87,20 @@ interface Frozen {
   base: string;
 }
 
-/** one scene at one device: its picture and its frozen page, written under `out` */
-async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, device: Device, out: string, assets: Assets): Promise<FrameRecord> {
-  const view = viewKind(scene.view);
+/**
+ * A scene in its state: a browser context at the device, its date at the
+ * config's clock, its storage seeded, its steps played. `live` is for a
+ * person to use it (`kanvas open`): motion as the page has it, timers not held.
+ * A step that can't be played stops the steps and says which.
+ */
+export async function openScene(browser: Browser, config: KanvasConfig, scene: Scene, device: Device, live = false): Promise<{ context: BrowserContext; page: Page; error?: string }> {
   const context = await browser.newContext({
     baseURL: config.baseUrl,
     viewport: { width: device.width, height: device.height },
     deviceScaleFactor: device.scale ?? 1,
     isMobile: !!device.mobile,
     hasTouch: !!device.mobile,
-    reducedMotion: config.reducedMotion === false ? "no-preference" : "reduce",
+    reducedMotion: live || config.reducedMotion === false ? "no-preference" : "reduce",
     ...(config.timezone ? { timezoneId: config.timezone } : {}),
     ...(config.locale ? { locale: config.locale } : {}),
   });
@@ -106,12 +113,13 @@ async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, dev
     }
     await context.addInitScript({
       // the page's date starts at the config's clock and runs on from it
-      content: `(${SEED})(${JSON.stringify({ clock: new Date(config.clock).getTime(), local: seed.localStorage, session: seed.sessionStorage, hold: scene.hold, hide: config.hide ?? [] })});`,
+      content: `(${SEED})(${JSON.stringify({ clock: new Date(config.clock).getTime(), local: seed.localStorage, session: seed.sessionStorage, hold: live ? undefined : scene.hold, hide: config.hide ?? [] })});`,
     });
     const page = await context.newPage();
     await page.goto(scene.path, { waitUntil: "load", timeout: 45000 });
     await quiet(page);
     for (const [i, step] of (scene.steps ?? []).entries()) {
+      if (live && "hold" in step) continue;
       try {
         await play(page, step);
       } catch (e) {
@@ -120,6 +128,20 @@ async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, dev
       }
     }
     await quiet(page);
+    return { context, page, ...(error ? { error } : {}) };
+  } catch (e) {
+    await context.close();
+    throw e;
+  }
+}
+
+/** one scene at one device: its picture, a small one, and its frozen page, written under `out` */
+async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, device: Device, out: string, assets: Assets): Promise<FrameRecord> {
+  const view = viewKind(scene.view);
+  const opened = await openScene(browser, config, scene, device);
+  const { context, page } = opened;
+  let error = opened.error;
+  try {
     // the pointer off the page, so the last thing pressed doesn't show its hover
     await page.mouse.move(-1, -1).catch(() => {});
     await page.waitForTimeout(300);
@@ -155,6 +177,13 @@ async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, dev
       size = { width: device.width, height: Math.max(device.height, geo.height) };
     }
 
+    // the small picture, for a board seen from far: the same clip, scaled
+    const scale = Math.min(1, THUMB_WIDTH / device.width);
+    const clipOf = { x: view === "screen" ? geo.scrollX : 0, y: view === "screen" ? geo.scrollY : (scroll?.y ?? 0), ...size, scale };
+    const cdp = await context.newCDPSession(page);
+    const small = (await cdp.send("Page.captureScreenshot", { format: "webp", quality: 80, clip: clipOf, captureBeyondViewport: true })) as { data: string };
+    const thumb = Buffer.from(small.data, "base64");
+
     // the page, frozen
     const frozen = (await page.evaluate("window.__kanvas.freeze()")) as Frozen;
     const html = await assemble(frozen, device, assets);
@@ -163,6 +192,7 @@ async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, dev
     mkdirSync(join(out, "frames"), { recursive: true });
     writeFileSync(join(out, "frames", `${id}.html`), html);
     writeFileSync(join(out, "frames", `${id}.png`), png);
+    writeFileSync(join(out, "frames", `${id}.thumb.webp`), thumb);
     return {
       scene: scene.id,
       device: device.id,
@@ -171,6 +201,7 @@ async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, dev
       ...(scroll && (scroll.x || scroll.y) ? { scroll } : {}),
       html: `frames/${id}.html`,
       png: `frames/${id}.png`,
+      thumb: `frames/${id}.thumb.webp`,
       htmlHash: sha1(html),
       pngHash: sha1(png),
       ...(frozen.fallback.length ? { fallback: frozen.fallback } : {}),
@@ -181,8 +212,8 @@ async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, dev
   }
 }
 
-const decode = (s: string) => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&");
-const encode = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/ /g, "&nbsp;");
+const decode = (s: string) => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, "\u00a0").replace(/&amp;/g, "&");
+const encode = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/\u00a0/g, "&nbsp;");
 
 /**
  * The frozen page with every file pointing at the frame's own copy. Its

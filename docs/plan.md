@@ -105,7 +105,7 @@ What the prototype's canvas does well, kept:
 | --- | --- | --- |
 | 0 | This repo, the config's first shape, this plan | Done (2026-11-24) |
 | 1 | Runner: the config settles; `snap` with the three kinds of frame, the frozen clock, the PNG fallback | Done (2026-11-24), see "Phase 1" below |
-| 2 | Viewer: board, lanes, rows, arrows, devices, placeholders, zoom levels, the frame and lane drawers (rules, note, copy image and link, open live) | All ~85 of the first app's frames open together under ~500 MB |
+| 2 | Viewer: board, lanes, rows, arrows, devices, placeholders, zoom levels, the frame and lane drawers (rules, note, copy image and link, open live) | Done (2026-11-24), see "Phase 2" below |
 | 3 | `diff`, `log` and `check`: the changelog from git, board-level entries, rule changes | A commit in the first app adds entries only to the frames that changed |
 | 4 | The first app moves over (section 6) | The first app's `/canvas` is kanvas, updated on every commit to main |
 | 5 | `init` and the agent instructions, a second app (a vibe-coded one), docs, the npm name, a licence, publish | Someone else sets it up without help |
@@ -130,6 +130,20 @@ What it took, for whoever reads the code:
 - **What can't be frozen** names itself (`shadow DOM in <x>`, `a canvas`, `an iframe`, a modal in the top layer) and only counts when it can be seen: Next's 1-pixel route announcer doesn't.
 
 The config grew from it: targets found like a person finds them (role and name, label, placeholder, text, CSS, `within`, `nth`, `contains`), steps `click`, `fill`, `leave`, `see`, `show`, `top`, `press`, `wait`, `hold`; a scene's `from` (absent: the one before it in its row; null: none) and `hold`; a section found by a target; a lane's `ticket` and titled `lists`; the config's `hide`, `timezone`, `locale` and `reducedMotion` (on by default, so what animates in is simply there).
+
+## Phase 2: the viewer (done 2026-11-24)
+
+The board, built with Vite and React into `dist/viewer` (77 KB gzipped). Three ways to it:
+
+- `kanvas view` serves it beside the frames on this machine, and answers "Open live" by opening the scene in a real browser here;
+- `kanvas open <scene>` does that from the terminal: a real window at the device, in the scene's state, with motion as the page has it, open until it's closed;
+- `kanvas build` writes it and the frames into one folder for any static host; there, "Open live" says the command to run instead.
+
+What it does: a board per page, lanes and their rows, an arrow from a state to the one it leads to (within its lane: one across lanes would cross every lane between, so the label's "→" and the drawer say where it comes from), desktop and phone switched for the whole board, a dashed placeholder for what isn't built, the board's words drawn larger as it zooms out so they stay readable (the action drops when far), drag or scroll to move, ⌘/Ctrl with scroll or a pinch to zoom, keys (arrows frame to frame, Enter brings one up, 0 the whole board, Shift with an arrow moves it), a side list of boards, lanes and states, a link for every board, lane and frame (`#/<board>/<scene>@<device>`).
+
+The drawer: for a frame, its kind and ticket, Copy image (the picture with a line under it: ticket, state, screen size, the day it was copied), Copy link, Open live, how it's reached (and from which frame), what it shows, its rules and its lane's, its changelog, what kind of frame it is; for a lane, Copy lane as a picture (its story, rows, frames and arrows), its story, rules, titled lists, changelog and states.
+
+Memory, with the first app's plan board (41 states, the largest): about 320 MB opened, 340 MB with the whole board in view, 425 to 440 MB with a frame picked and zoomed in. From far a frame is its small picture (a WebP about 360 wide, made by `snap`); close enough to read (30% and up), the dozen nearest the screen are their frozen page in a sandboxed frame with no script, the rest stay pictures. A frame that can't be frozen faithfully is its full picture up close.
 
 ## Decided (2026-11-24)
 

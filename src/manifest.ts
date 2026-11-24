@@ -1,57 +1,11 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { isGap, type Device, type KanvasConfig, type View } from "./config.js";
+import { isGap, type KanvasConfig, type View } from "./config.js";
+import type { Cell, FrameRecord, Manifest, ViewKind } from "./types.js";
 
-export type ViewKind = "page" | "screen" | "section";
+export type { ChangeEntry, Changelog, FrameRecord, Manifest, ViewKind } from "./types.js";
+
 export const viewKind = (v: View | undefined): ViewKind => (!v || v === "page" ? "page" : v === "screen" ? "screen" : "section");
-
-/** one scene at one device, as written */
-export interface FrameRecord {
-  scene: string;
-  device: string;
-  view: ViewKind;
-  /** the frame's size in CSS pixels */
-  width: number;
-  height: number;
-  /** where its document is scrolled to show it (a screen, a section) */
-  scroll?: { x: number; y: number };
-  /** paths under the output folder */
-  html: string;
-  png: string;
-  htmlHash: string;
-  pngHash: string;
-  /** what couldn't be frozen faithfully: the frame is shown as its picture */
-  fallback?: string[];
-  /** a step that couldn't be played: the frame shows where the scene stopped */
-  error?: string;
-}
-
-type Cell = { scene: string; from: string | null } | { gap: { id: string; title: string; note?: string; via?: string }; from: string | null };
-
-/** the board as written: everything the viewer needs, nothing it would run */
-export interface Manifest {
-  kanvas: 1;
-  baseUrl: string;
-  clock: string;
-  devices: Device[];
-  boards: {
-    id: string;
-    title: string;
-    path?: string;
-    lead?: string;
-    lanes: {
-      id: string;
-      title: string;
-      ticket?: string;
-      story?: string;
-      rules?: string[];
-      lists?: { title: string; items: string[] }[];
-      rows: { kind: "positive" | "negative" | "edge"; cells: Cell[] }[];
-    }[];
-  }[];
-  scenes: Record<string, { title: string; path: string; via?: string; note?: string; rules?: string[]; view: ViewKind; devices: string[] }>;
-  frames: Record<string, FrameRecord>;
-}
 
 export const frameId = (scene: string, device: string) => `${scene}@${device}`;
 
