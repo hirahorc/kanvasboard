@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+# a run's scratch: browsers' profiles, half-written snapshots
+.kanvas-cache/
