@@ -104,11 +104,32 @@ What the prototype's canvas does well, kept:
 | Phase | Work | Done when |
 | --- | --- | --- |
 | 0 | This repo, the config's first shape, this plan | Done (2026-11-24) |
-| 1 | Runner: the config settles; `snap` with the three kinds of frame, the frozen clock, the PNG fallback | The first app's plan board (40 states) comes out static and looks like the live pages |
+| 1 | Runner: the config settles; `snap` with the three kinds of frame, the frozen clock, the PNG fallback | Done (2026-11-24), see "Phase 1" below |
 | 2 | Viewer: board, lanes, rows, arrows, devices, placeholders, zoom levels, the frame and lane drawers (rules, note, copy image and link, open live) | All ~85 of the first app's frames open together under ~500 MB |
 | 3 | `diff`, `log` and `check`: the changelog from git, board-level entries, rule changes | A commit in the first app adds entries only to the frames that changed |
 | 4 | The first app moves over (section 6) | The first app's `/canvas` is kanvas, updated on every commit to main |
 | 5 | `init` and the agent instructions, a second app (a vibe-coded one), docs, the npm name, a licence, publish | Someone else sets it up without help |
+
+## Phase 1: the runner (done 2026-11-24)
+
+`kanvas snap` and `kanvas verify` work, run against the first app's flow through a test config outside both repos (its existing canvas scenes, described to kanvas).
+
+- **All of the first app's flow:** 154 frames (77 states at desktop and phone) in about 75 seconds, every one made.
+- **Faithful:** `verify` renders each frozen frame from its static file and compares it with the picture of the live page, at half size so text smoothed differently on a GPU layer doesn't count. 148 of 154 match (under 0.5% of pixels differ); the other six differ by 0.5 to 1.8%, all of it text smoothing on bottom sheets, nothing moved or missing.
+- **Stable:** snapped twice with nothing changed, the frozen HTML is identical on all 154 frames; the PNG differs on 5 (rendering isn't byte-exact). So phase 3 decides "changed" by the HTML's hash, and uses the picture only to show what changed.
+- **Size:** about 17 MB of HTML and 24 MB of PNG for 154 frames, plus 2.6 MB of shared files. A page's stylesheets are shared files (the whole flow uses 9), so a frame's HTML is only its DOM.
+
+What it took, for whoever reads the code:
+
+- **Only the date moves.** Playwright's fake clock fakes timers and animation frames too, and made pages crawl (a frame took 15 minutes); the page's `Date` is moved to the config's clock instead, and everything else runs as it does.
+- **Seeds run at the clock too**, in Node: the config loads, and a scene's seed is worked out, with `Date` at the config's clock and the process in its time zone.
+- **What the config hides is hidden from the first moment**, not only for the picture: a dev toolbar at the foot of a phone screen sat over a button a step pressed.
+- **Scrolls are instant** (pages set `scroll-behavior: smooth`), **a page frame is taken from its top** (an app that scrolls to an error left the sticky header mid-page in the picture), **the pointer leaves the page** after the steps (no hover on the last thing pressed), and **the focused element keeps its ring**: it's marked, and every `:focus`, `:focus-visible` and `:focus-within` selector also matches the mark.
+- **Viewport units become pixels** of the device, in declarations only (never selectors: `.min-h-[100dvh]` still matches), so a screen-tall hero stays a screen tall in a frame as tall as its page.
+- **Pictures are decoded before a frame is taken**, in the page and in `verify`: loaded isn't painted.
+- **What can't be frozen** names itself (`shadow DOM in <x>`, `a canvas`, `an iframe`, a modal in the top layer) and only counts when it can be seen: Next's 1-pixel route announcer doesn't.
+
+The config grew from it: targets found like a person finds them (role and name, label, placeholder, text, CSS, `within`, `nth`, `contains`), steps `click`, `fill`, `leave`, `see`, `show`, `top`, `press`, `wait`, `hold`; a scene's `from` (absent: the one before it in its row; null: none) and `hold`; a section found by a target; a lane's `ticket` and titled `lists`; the config's `hide`, `timezone`, `locale` and `reducedMotion` (on by default, so what animates in is simply there).
 
 ## Decided (2026-11-24)
 

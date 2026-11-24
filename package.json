@@ -17,8 +17,19 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && cp -R src/page dist/page",
     "dev": "tsx src/cli.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "pixelmatch": "^8.0.0",
+    "playwright-core": "^1.65.1",
+    "pngjs": "^7.0.0",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/pngjs": "^6.0.5",
+    "typescript": "^7.0.2"
   }
 }

@@ -8,6 +8,9 @@ const cart = (items: { sku: string; qty: number }[]) => ({
 export default defineConfig({
   baseUrl: "http://localhost:3000",
   clock: "2026-11-24T09:00:00+07:00",
+  timezone: "Europe/Lisbon",
+  // never part of a state: a dev badge, a cookie banner
+  hide: ["[data-dev-badge]"],
   devices: [
     { id: "desktop", label: "Desktop", width: 1280, height: 900 },
     { id: "mobile", label: "Mobile", width: 390, height: 844, mobile: true },
@@ -34,7 +37,7 @@ export default defineConfig({
                   from: "cart-two",
                   via: "Remove",
                   seed: cart([{ sku: "mug", qty: 1 }, { sku: "tee", qty: 2 }]),
-                  steps: [{ click: { role: "button", name: "Remove Mug" } }],
+                  steps: [{ click: { role: "button", name: "Remove Mug" } }, { see: { role: "dialog" } }],
                   view: "screen",
                   rules: ["Removing asks first: it can't be undone."],
                 },
