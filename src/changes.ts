@@ -20,6 +20,8 @@ export interface Diff {
   rules: string[];
   /** scenes whose frozen page was written differently but looks the same: no entry, the files are updated */
   rewritten: string[];
+  /** scenes the last snapshot couldn't reach: no entry until they can be */
+  failed: string[];
 }
 
 interface Where {
@@ -60,18 +62,21 @@ const skeletonOf = (html: string) =>
  * rendering, with the page the same, never counts.
  */
 export function diff(o: { out: string; ref?: string }): { diff: Diff; before: Manifest | null; now: Manifest; at: Where } {
-  const at = where(o.out);
-  const ref = o.ref ?? "HEAD";
   const now = readManifest(o.out);
   if (!now) throw new Error(`no frames in ${o.out}: run kanvas snap first`);
+  const at = where(o.out);
+  const ref = o.ref ?? "HEAD";
   const raw = fileAt(at.repo, ref, `${at.path}/manifest.json`);
   const before = raw ? (JSON.parse(raw.toString()) as Manifest) : null;
-  const d: Diff = { changed: [], added: [], removed: [], rules: [], rewritten: [] };
+  const d: Diff = { changed: [], added: [], removed: [], rules: [], rewritten: [], failed: [] };
+  const reached = (id: string) => !Object.values(now.frames).some((f) => f.scene === id && f.error);
+  d.failed = Object.keys(now.scenes).filter((id) => !reached(id));
   if (!before) {
-    d.added = Object.keys(now.scenes);
+    d.added = Object.keys(now.scenes).filter(reached);
     return { diff: d, before, now, at };
   }
   for (const id of Object.keys(now.scenes)) {
+    if (!reached(id)) continue;
     if (!before.scenes[id]) {
       d.added.push(id);
       continue;
@@ -110,7 +115,7 @@ export function diff(o: { out: string; ref?: string }): { diff: Diff; before: Ma
     for (const l of b.lanes) {
       const was = before.boards.find((x) => x.id === b.id)?.lanes.find((x) => x.id === l.id);
       if (!was || same(was.rules, l.rules)) continue;
-      for (const r of l.rows) for (const c of r.cells) if ("scene" in c && !d.rules.includes(c.scene) && !d.added.includes(c.scene)) d.rules.push(c.scene);
+      for (const r of l.rows) for (const c of r.cells) if ("scene" in c && !d.rules.includes(c.scene) && !d.added.includes(c.scene) && !d.failed.includes(c.scene)) d.rules.push(c.scene);
     }
   return { diff: d, before, now, at };
 }

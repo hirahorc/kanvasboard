@@ -1,8 +1,19 @@
 {
   "name": "kanvasboard",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Every state of your app on one board, as static frames, each with its rules and its changelog.",
+  "keywords": [
+    "storyboard",
+    "screenshots",
+    "states",
+    "design",
+    "changelog",
+    "playwright",
+    "ai",
+    "agents",
+    "vibe-coding"
+  ],
   "license": "MIT",
   "author": "Hira Muhammad",
   "repository": {
@@ -13,22 +24,30 @@
   "bugs": "https://github.com/hirahorc/kanvasboard/issues",
   "type": "module",
   "bin": {
-    "kanvas": "./dist/cli.js"
+    "kanvas": "./dist/cli.js",
+    "kanvasboard": "./dist/cli.js"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
+  "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "docs/config.md",
+    "kanvas.config.example.ts"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && cp -R src/page dist/page && vite build",
+    "build": "rm -rf dist && tsc -p tsconfig.json && cp -R src/page dist/page && vite build",
     "dev": "tsx src/cli.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p viewer/tsconfig.json",
-    "dev:viewer": "vite"
+    "dev:viewer": "vite",
+    "prepack": "npm run build"
   },
   "dependencies": {
     "pixelmatch": "^8.0.0",

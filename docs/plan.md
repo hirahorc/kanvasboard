@@ -108,7 +108,7 @@ What the prototype's canvas does well, kept:
 | 2 | Viewer: board, lanes, rows, arrows, devices, placeholders, zoom levels, the frame and lane drawers (rules, note, copy image and link, open live) | Done (2026-11-24), see "Phase 2" below |
 | 3 | `diff`, `log` and `check`: the changelog from git, board-level entries, rule changes | Done (2026-11-25), see "Phase 3" below |
 | 4 | The first app moves over (section 6) | Built (2026-11-25), see "Phase 4" below |
-| 5 | `init` and the agent instructions, a second app (a vibe-coded one), docs, the npm name, a licence, publish | Someone else sets it up without help |
+| 5 | `init` and the agent instructions, a second app (a vibe-coded one), docs, the npm name, a licence, publish | Built (2026-11-25), see "Phase 5" below; publishing waits on an npm login |
 
 ## Phase 1: the runner (done 2026-11-24)
 
@@ -172,6 +172,14 @@ Tested in a throwaway repo on the first app's plan board: the first frames as on
 - Open live on the deployed board: The first app already opens a scene by itself (`?scene=<id>`), so its config says `live: { query: "scene" }` and the board links there; the old in-app scene mode stays for that, while the old live-iframe board and its scene checker are gone. A generic in-page player for apps that can't do this is left for later.
 - New in kanvas for it: `site` and `live` in the config, page links from the board's bar, a link to a state on another board (the overview borrows states), frames marked noindex, and `check` accepting a state that follows one on another board.
 - `check` passes on all 77 scenes at both widths; `snap` made all 154 frames; `/canvas`, an old link, Open live into scene mode and back, and the prototype's switch were each opened on the running app.
+
+## Phase 5: for someone else (built 2026-11-25)
+
+- `kanvas init` writes a starting `kanvas.config.ts` from the app's routes (Next.js, Nuxt, Astro, SvelteKit; in other apps, the paths their code links to) and its dev server's port, and the agent's block in `AGENTS.md`, with a `CLAUDE.md` that reads it when there's none. Run again, it leaves the config and replaces the block.
+- The package is `kanvasboard` 0.1.0, with the commands `kanvas` and `kanvasboard` (so `npx kanvasboard init` works before installing). A config imports only its type (`import type { KanvasConfig }`), so it runs where the package isn't installed. The README, `docs/config.md` and the example config ship with it.
+- New for it: a `select` step; a `label` that finds a `<select>` it wraps; step failures said in words ("nothing visible matches …", "… has no option …: it has …"); a scene that can't be reached keeps its last good frame, marked, and is left out of the changelog; plain messages when the app isn't running or Chrome is missing.
+- Tested on a second app, a small Vite + React plant tracker: 16 frames in 6 seconds; a copy change, committed with a `Source:`, became one entry on one state. Then an agent that had never seen kanvas set it up on a clean copy with only the package's own docs: 16 of 16 frames, `verify` 16 of 16, a second snapshot changing nothing. What it found unclear or missing became the fixes above. The first app's 77 scenes still pass `check` with the new build.
+- Left: publishing (it needs an npm login on this machine, then `private` comes out of package.json), and the CI example in the README hasn't run on GitHub Actions yet.
 
 ## Decided (2026-11-24)
 

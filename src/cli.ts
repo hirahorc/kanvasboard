@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { diff, log as writeLog } from "./changes.js";
 import { check } from "./check.js";
+import { init } from "./init.js";
 import { build, openLive, view } from "./live.js";
 import { loadConfig } from "./load.js";
 import { snap } from "./snap.js";
@@ -10,6 +11,7 @@ import { verify } from "./verify.js";
 
 const HELP = `kanvas: every state of your app on one board
 
+  kanvas init             a starting kanvas.config.ts from this app's pages, and your agent's instructions
   kanvas snap [board…]    open each scene at each device and freeze it
   kanvas view             the board on this machine, "Open live" included
   kanvas open <scene>     the scene in a real browser, in its state, to use
@@ -30,6 +32,7 @@ options
   --summary <text>        for log: say what changed (default: the commits' subjects)
   --source <who>          for log: who asked (default: a Source: trailer, or the tickets named)
   --browser <b>           chrome (installed, default), chromium, or a path
+  --force                 for init: write kanvas.config.ts even if there is one
 `;
 
 async function main() {
@@ -46,6 +49,7 @@ async function main() {
       ref: { type: "string" },
       summary: { type: "string" },
       source: { type: "string" },
+      force: { type: "boolean" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -54,9 +58,23 @@ async function main() {
     process.stdout.write(HELP);
     return;
   }
+  const log = (l: string) => process.stdout.write(`${l}\n`);
+  if (command === "init") {
+    const r = init({ root: process.cwd(), force: values.force });
+    const pages = r.app.routes.length;
+    log(r.config ? `wrote kanvas.config.ts: ${pages} page${pages === 1 ? "" : "s"} of ${r.app.framework ? `a ${r.app.framework} app` : "the app"} at localhost:${r.app.port}` : "kanvas.config.ts is already here: left as it is (--force writes a new one)");
+    log(`wrote your coding agent's instructions in ${r.agents.map((f) => f.split("/").pop()).join(" and ")}${r.importer ? ", and a CLAUDE.md that reads it" : ""}`);
+    log(`\nnext:${r.installed ? "" : "\n  npm i -D kanvasboard   so the config's types and npx kanvas are this project's"}
+  start the app          (kanvas opens it at localhost:${r.app.port})
+  npx kanvas snap        every scene, frozen into kanvas/
+  npx kanvas view        the board
+
+then ask your coding agent to add the states that matter: an empty list, an error, a dialog open.`);
+    return;
+  }
   const { config, file } = await loadConfig(values.config);
   const root = dirname(file);
-  const log = (l: string) => process.stdout.write(`${l}\n`);
+  if (command === "snap" || command === "check" || command === "open") await answers(config.baseUrl);
 
   if (command === "snap") {
     const t0 = Date.now();
@@ -71,6 +89,7 @@ async function main() {
       log,
     });
     log(`\n${done.length - failed.length} of ${done.length + failed.filter((f) => !f.html).length} frames in ${((Date.now() - t0) / 1000).toFixed(0)}s${failed.length ? `, ${failed.length} with a problem` : ""}`);
+    if (failed.length) log("fix those scenes before committing: a scene that can't be reached keeps the last frame that did, or none if it never had one");
     process.exitCode = failed.length ? 1 : 0;
   } else if (command === "view") {
     const out = resolve(root, config.out ?? "kanvas");
@@ -95,9 +114,11 @@ async function main() {
       say("rules changed", d.rules);
       say("gone", d.removed);
       say("written differently, looks the same", d.rewritten);
+      say("can't be reached, left out (fix the scene and snap again)", d.failed);
       if (!d.changed.length && !d.added.length && !d.rules.length && !d.removed.length) log("nothing looks different");
     } else {
-      const { entries } = writeLog({ out, ref: values.ref, summary: values.summary, source: values.source });
+      const { entries, diff: d } = writeLog({ out, ref: values.ref, summary: values.summary, source: values.source });
+      if (d.failed.length) log(`left out, can't be reached: ${d.failed.join(", ")} (fix the scene and snap again)`);
       if (!entries.length) log("nothing looks different: no entry");
       for (const e of entries) {
         const what = e.boards?.length ? `the whole of ${e.boards.join(", ")}` : `${e.scenes?.length} state${e.scenes?.length === 1 ? "" : "s"}${e.added ? ", new" : ""}${e.rule ? ", rules" : ""}`;
@@ -117,6 +138,15 @@ async function main() {
   } else {
     process.stdout.write(`no command "${command}"\n\n${HELP}`);
     process.exitCode = 2;
+  }
+}
+
+/** the app has to be running: say so plainly instead of a failure per scene */
+async function answers(baseUrl: string) {
+  try {
+    await fetch(baseUrl, { signal: AbortSignal.timeout(10_000), redirect: "manual" });
+  } catch {
+    throw new Error(`nothing answers at ${baseUrl}: start the app first, or set baseUrl in kanvas.config.ts to where it runs`);
   }
 }
 

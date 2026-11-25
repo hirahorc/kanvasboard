@@ -26,10 +26,18 @@ export interface SnapOptions {
   log?: (line: string) => void;
 }
 
-export function launch(browser = "chrome", headless = true): Promise<Browser> {
-  if (browser === "chrome") return chromium.launch({ channel: "chrome", headless });
-  if (browser === "chromium") return chromium.launch({ headless });
-  return chromium.launch({ executablePath: browser, headless });
+export async function launch(browser = "chrome", headless = true): Promise<Browser> {
+  try {
+    if (browser === "chrome") return await chromium.launch({ channel: "chrome", headless });
+    if (browser === "chromium") return await chromium.launch({ headless });
+    return await chromium.launch({ executablePath: browser, headless });
+  } catch (e) {
+    const m = (e as Error).message;
+    if (browser === "chrome" && /is not found|distribution/i.test(m))
+      throw new Error("Google Chrome isn't installed here: install it, or run `npx playwright-core install chromium` and add --browser chromium");
+    if (browser === "chromium" && /Executable doesn't exist|playwright install/i.test(m)) throw new Error("Playwright's Chromium isn't installed: run `npx playwright-core install chromium` first");
+    throw e;
+  }
 }
 
 /** a picture small enough for a whole board of them: about this wide */
@@ -48,7 +56,17 @@ async function play(page: Page, step: Step) {
     const field = locate(page, step.fill);
     await field.fill("", { timeout: STEP_MS });
     await field.pressSequentially(step.text);
-  } else if ("leave" in step) await locate(page, step.leave).blur({ timeout: STEP_MS });
+  } else if ("select" in step) {
+    const field = locate(page, step.select);
+    await field.waitFor({ state: "visible", timeout: STEP_MS });
+    // an option that isn't there would only time out: say which ones are
+    const options = await field.evaluate((el) => (el instanceof HTMLSelectElement ? [...el.options].map((o) => [o.label, o.value] as const) : null));
+    if (!options) throw new Error("not a <select>");
+    if (!options.some(([label, value]) => label === step.option || value === step.option))
+      throw new Error(`${say(step.select)} has no option "${step.option}": it has ${options.map(([l]) => `"${l}"`).join(", ")}`);
+    await field.selectOption(step.option, { timeout: STEP_MS });
+  }
+  else if ("leave" in step) await locate(page, step.leave).blur({ timeout: STEP_MS });
   else if ("see" in step) await locate(page, step.see).waitFor({ state: "visible", timeout: STEP_MS });
   else if ("show" in step) {
     await locate(page, step.show).evaluate((el) => el.scrollIntoView({ block: "center", behavior: "instant" }), undefined, { timeout: STEP_MS });
@@ -61,6 +79,7 @@ async function play(page: Page, step: Step) {
 const stepName = (s: Step): string => {
   if ("click" in s) return `click ${say(s.click)}`;
   if ("fill" in s) return `fill ${say(s.fill)}`;
+  if ("select" in s) return `select "${s.option}" in ${say(s.select)}`;
   if ("leave" in s) return `leave ${say(s.leave)}`;
   if ("see" in s) return `see ${say(s.see)}`;
   if ("show" in s) return `show ${say(s.show)}`;
@@ -69,6 +88,16 @@ const stepName = (s: Step): string => {
   if ("hold" in s) return `hold ${s.hold}ms`;
   return "top";
 };
+
+/** what a step's failure means, in words: Playwright's own first line otherwise */
+function failure(step: Step, e: Error): string {
+  const m = e.message.split("\n")[0] ?? "";
+  const target = "click" in step ? step.click : "fill" in step ? step.fill : "select" in step ? step.select : "leave" in step ? step.leave : "see" in step ? step.see : "show" in step ? step.show : undefined;
+  if (/not an <input>, <textarea>|contenteditable/i.test(m)) return `fill types into a text field; for a <select> use { select: …, option: "…" }`;
+  if (/not a <select>/i.test(m)) return `select picks an option of a <select>; for a text field use { fill: …, text: "…" }`;
+  if (target !== undefined && /Timeout \d+ms exceeded/i.test(m)) return `nothing visible matches ${say(target)} after ${STEP_MS / 1000}s: check its words, role or label (\`contains: true\` matches part of the words)`;
+  return m;
+}
 
 const sha1 = (b: string | Buffer) => createHash("sha1").update(b).digest("hex");
 
@@ -123,7 +152,7 @@ export async function openScene(browser: Browser, config: KanvasConfig, scene: S
       try {
         await play(page, step);
       } catch (e) {
-        error = `step ${i + 1}, ${stepName(step)}: ${(e as Error).message.split("\n")[0]}`;
+        error = `step ${i + 1}, ${stepName(step)}: ${failure(step, e as Error)}`;
         break;
       }
     }
@@ -152,6 +181,10 @@ async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, dev
       } catch (e) {
         error ??= `the section ${say(scene.view.section)} isn't on the page: ${(e as Error).message.split("\n")[0]}`;
       }
+    }
+    // a state the steps couldn't reach keeps the last frame that did: half a state is never written over a whole one
+    if (error && was?.html && was.png && (!was.error || was.stale) && existsSync(join(out, was.html)) && existsSync(join(out, was.png))) {
+      return { ...was, error, stale: true };
     }
     await page.evaluate(FREEZE);
     const geo = (await page.evaluate(

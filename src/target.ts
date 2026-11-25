@@ -16,7 +16,8 @@ export function locate(page: Page, t: Target): Locator {
   const exact = !t.contains;
   let found: Locator;
   if (t.role) found = root.getByRole(t.role as Parameters<Page["getByRole"]>[0], t.name ? { name: t.name, exact } : {});
-  else if (t.label) found = root.getByLabel(t.label, { exact });
+  // a <select> wrapped in its <label> carries its options' words too: its accessible name is the label's own
+  else if (t.label) found = root.getByLabel(t.label, { exact }).or(root.getByRole("combobox", { name: t.label, exact })).or(root.getByRole("listbox", { name: t.label, exact }));
   else if (t.placeholder) found = root.getByPlaceholder(t.placeholder, { exact });
   else if (t.text) found = root.getByText(t.text, { exact });
   else if (t.css) found = root.locator(t.css);

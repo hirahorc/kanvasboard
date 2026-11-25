@@ -26,6 +26,8 @@ export interface FrameRecord {
   fallback?: string[];
   /** a step that couldn't be played: the frame shows where the scene stopped */
   error?: string;
+  /** the last snapshot couldn't reach the state (`error`): the frame is the last one that did */
+  stale?: boolean;
 }
 
 export type Cell = { scene: string; from: string | null } | { gap: { id: string; title: string; note?: string; via?: string }; from: string | null };

@@ -1,11 +1,11 @@
 // What an app puts in its own repo as kanvas.config.ts. An example shop, not a real app.
-import { defineConfig } from "kanvas";
+import type { KanvasConfig } from "kanvasboard";
 
 const cart = (items: { sku: string; qty: number }[]) => ({
   localStorage: { "shop:cart": JSON.stringify({ items }) },
 });
 
-export default defineConfig({
+const config = {
   baseUrl: "http://localhost:3000",
   clock: "2026-11-24T09:00:00+07:00",
   timezone: "Europe/Lisbon",
@@ -50,4 +50,6 @@ export default defineConfig({
       ],
     },
   ],
-});
+} satisfies KanvasConfig;
+
+export default config;

@@ -50,6 +50,8 @@ export type Step =
   | { fill: Target; text: string }
   /** move focus out of a field, so what it says on being left shows */
   | { leave: Target }
+  /** pick an option of a `<select>`, by its words or its value */
+  | { select: Target; option: string }
   /** wait until it's on the screen */
   | { see: Target }
   /** bring it to the middle of the screen (a "screen" frame shows what's there) */
@@ -164,7 +166,7 @@ export interface KanvasConfig {
   site?: string;
   /**
    * How a deployed app opens a scene by itself, if it can: a query parameter
-   * it reads (e.g. { query: "scene" } for `/plan?scene=elig-abroad`). With it,
+   * it reads (e.g. { query: "scene" } for `/cart?scene=cart-empty`). With it,
    * "Open live" works on the built board too, not only from `kanvas view`.
    */
   live?: { query: string };

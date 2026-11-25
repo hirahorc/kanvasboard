@@ -114,7 +114,12 @@ export function Drawer({ data, board, device, scene, lane, onPick, onClose }: Pr
           {theLane?.ticket && <span className="k-code">{theLane.ticket}</span>}
         </p>
         <h2 tabIndex={-1}>{s?.title ?? scene}</h2>
-        {f?.error && <p className="k-alert">This scene stopped at {f.error}. The frame shows where it got to.</p>}
+        {f?.error &&
+          (f.stale ? (
+            <p className="k-alert">The last snapshot couldn't reach this state: {f.error}. The frame is the last one that did.</p>
+          ) : (
+            <p className="k-alert">This scene stopped at {f.error}. The frame shows where it got to.</p>
+          ))}
         <div className="k-acts">
           {f?.png && (
             <Act
