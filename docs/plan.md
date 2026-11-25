@@ -181,6 +181,6 @@ Tested in a throwaway repo on the first app's plan board: the first frames as on
 
 ## Open
 
-1. **The name for npm, GitHub and a domain.** `kanvas` itself is taken on npm (an unrelated canvas editor), on GitHub, and as kanvas.dev. Checked 2026-11-24, fully free: **kanvasboard** (npm `kanvasboard`, GitHub `kanvasboard`, kanvasboard.com; kanvasboard.dev has no DNS). Also free on npm and GitHub but not as a .com: `usekanvas`, `kanvashq`, `getkanvas` (their .dev has no DNS). The product can stay "kanvas" with its command `kanvas`, whatever the package is called. Claim them before going public.
+1. **The name: kanvasboard, decided 2026-11-25.** The package is `kanvasboard` (still free on npm that day) and so is the GitHub repo; the product stays "kanvas", its command `kanvas`. `kanvas` itself is taken on npm (an unrelated canvas editor), on GitHub, and as kanvas.dev. Still to claim: the npm name (it is claimed by the first publish) and kanvasboard.com.
 2. **Licence.** Before the repo goes public.
-3. **The GitHub repo.** Hira creates it; `gh` isn't logged in on this machine.
+3. **The GitHub repo.** `kanvasboard` on Hira's account, private until the licence is chosen. `gh` has to be logged in on this machine first.
