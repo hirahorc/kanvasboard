@@ -182,5 +182,5 @@ Tested in a throwaway repo on the first app's plan board: the first frames as on
 ## Open
 
 1. **The name: kanvasboard, decided 2026-11-25.** The package is `kanvasboard` (still free on npm that day) and so is the GitHub repo; the product stays "kanvas", its command `kanvas`. `kanvas` itself is taken on npm (an unrelated canvas editor), on GitHub, and as kanvas.dev. Still to claim: the npm name (it is claimed by the first publish) and kanvasboard.com.
-2. **Licence.** Before the repo goes public.
-3. **The GitHub repo.** `kanvasboard` on Hira's account, private until the licence is chosen. `gh` has to be logged in on this machine first.
+2. **Licence: MIT, decided 2026-11-25.**
+3. **The GitHub repo: public since 2026-11-25**, at github.com/hirahorc/kanvasboard.

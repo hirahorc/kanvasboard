@@ -31,3 +31,7 @@ git add kanvas && git commit -m "chore(kanvas): frames"
 A commit can say who asked with a `Source:` trailer; otherwise the tickets it names (`PROJ-293`) are the source. `kanvas diff` shows what changed without writing anything.
 
 `snap` writes `kanvas/manifest.json` (the boards and every frame), `kanvas/frames/<scene>@<device>.html`, `.png` and `.thumb.webp`, and `kanvas/assets/` (images, fonts and stylesheets, shared by content). It drives the Chrome you have installed; `--browser chromium` uses Playwright's instead.
+
+## Licence
+
+MIT

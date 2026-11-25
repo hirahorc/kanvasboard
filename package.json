@@ -3,6 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "description": "Every state of your app on one board, as static frames, each with its rules and its changelog.",
+  "license": "MIT",
+  "author": "Hira Muhammad",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hirahorc/kanvasboard.git"
+  },
+  "homepage": "https://github.com/hirahorc/kanvasboard#readme",
+  "bugs": "https://github.com/hirahorc/kanvasboard/issues",
   "type": "module",
   "bin": {
     "kanvas": "./dist/cli.js"
