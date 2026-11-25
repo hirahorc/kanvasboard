@@ -59,7 +59,10 @@ export interface Manifest {
 export interface ChangeEntry {
   /** ISO date of the commit */
   date: string;
+  /** the newest commit it answers to */
   commit?: string;
+  /** every commit since the frames were last written, newest first, when there's more than one */
+  commits?: string[];
   /** one line on what changed */
   summary: string;
   /** who asked for it: the PM, marketing, a ticket */
@@ -69,6 +72,8 @@ export interface ChangeEntry {
   boards?: string[];
   /** a rule changed, not only the page */
   rule?: boolean;
+  /** the scenes are new on the board */
+  added?: boolean;
 }
 
 export interface Changelog {

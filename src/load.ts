@@ -1,15 +1,31 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { tsImport } from "tsx/esm/api";
 import { atClock } from "./clock.js";
 import { isGap, type Board, type KanvasConfig, type Scene } from "./config.js";
 
 const NAMES = ["kanvas.config.ts", "kanvas.config.mts", "kanvas.config.js", "kanvas.config.mjs"];
 
-/** the config's clock, read from its source before it runs, so the config itself loads at it */
-function clockOf(source: string): string | undefined {
-  return source.match(/clock\s*:\s*["'`]([^"'`]+)["'`]/)?.[1];
+/**
+ * The config's clock and time zone, known before it runs, so the config
+ * itself loads at them: read from its source when they're written there,
+ * otherwise from the config loaded once on the side (probe.ts) and thrown away.
+ */
+function clockOf(file: string): { clock?: string; timezone?: string } {
+  const source = readFileSync(file, "utf8");
+  const clock = source.match(/clock\s*:\s*["'`]([^"'`]+)["'`]/)?.[1];
+  const timezone = source.match(/timezone\s*:\s*["'`]([^"'`]+)["'`]/)?.[1];
+  if (clock && (timezone || !/\btimezone\b/.test(source))) return { clock, timezone };
+  const self = fileURLToPath(import.meta.url);
+  const probe = self.replace(/load\.(ts|js)$/, (_m, ext: string) => `probe.${ext}`);
+  try {
+    const out = execFileSync(process.execPath, [...process.execArgv, probe, file], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    return JSON.parse(out.trim().split("\n").pop() ?? "{}") as { clock?: string; timezone?: string };
+  } catch {
+    return { clock, timezone };
+  }
 }
 
 export async function loadConfig(path?: string): Promise<{ config: KanvasConfig; file: string }> {
@@ -22,11 +38,9 @@ export async function loadConfig(path?: string): Promise<{ config: KanvasConfig;
     if (!config) throw new Error(`${file} has no default export`);
     return config;
   };
-  const source = readFileSync(file, "utf8");
-  // seeds work dates out in the pages' time zone, not this machine's
-  const zone = source.match(/timezone\s*:\s*["'`]([^"'`]+)["'`]/)?.[1];
-  if (zone) process.env.TZ = zone;
-  const clock = clockOf(source);
+  // seeds work dates out in the pages' time zone, not this machine's, and at the config's clock
+  const { clock, timezone } = clockOf(file);
+  if (timezone) process.env.TZ = timezone;
   const config = clock ? await atClock(clock, run) : await run();
   if (config.timezone) process.env.TZ = config.timezone;
   check(config);

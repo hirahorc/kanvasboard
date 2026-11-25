@@ -106,7 +106,7 @@ What the prototype's canvas does well, kept:
 | 0 | This repo, the config's first shape, this plan | Done (2026-11-24) |
 | 1 | Runner: the config settles; `snap` with the three kinds of frame, the frozen clock, the PNG fallback | Done (2026-11-24), see "Phase 1" below |
 | 2 | Viewer: board, lanes, rows, arrows, devices, placeholders, zoom levels, the frame and lane drawers (rules, note, copy image and link, open live) | Done (2026-11-24), see "Phase 2" below |
-| 3 | `diff`, `log` and `check`: the changelog from git, board-level entries, rule changes | A commit in the first app adds entries only to the frames that changed |
+| 3 | `diff`, `log` and `check`: the changelog from git, board-level entries, rule changes | Done (2026-11-25), see "Phase 3" below |
 | 4 | The first app moves over (section 6) | The first app's `/canvas` is kanvas, updated on every commit to main |
 | 5 | `init` and the agent instructions, a second app (a vibe-coded one), docs, the npm name, a licence, publish | Someone else sets it up without help |
 
@@ -144,6 +144,26 @@ What it does: a board per page, lanes and their rows, an arrow from a state to t
 The drawer: for a frame, its kind and ticket, Copy image (the picture with a line under it: ticket, state, screen size, the day it was copied), Copy link, Open live, how it's reached (and from which frame), what it shows, its rules and its lane's, its changelog, what kind of frame it is; for a lane, Copy lane as a picture (its story, rows, frames and arrows), its story, rules, titled lists, changelog and states.
 
 Memory, with the first app's plan board (41 states, the largest): about 320 MB opened, 340 MB with the whole board in view, 425 to 440 MB with a frame picked and zoomed in. From far a frame is its small picture (a WebP about 360 wide, made by `snap`); close enough to read (30% and up), the dozen nearest the screen are their frozen page in a sandboxed frame with no script, the rest stay pictures. A frame that can't be frozen faithfully is its full picture up close.
+
+## Phase 3: the changelog from git (done 2026-11-25)
+
+The routine in an app's repo, after a change is committed to main:
+
+```sh
+kanvas snap     # the frames as the app is now; a frame whose page is the same keeps its files untouched
+kanvas log      # entries for what looks different, from the commits since the frames were last committed
+git add kanvas && git commit -m "chore(kanvas): frames for …"
+```
+
+- **What counts as a change:** a frame whose frozen page is written differently, and either its words changed (copy, field values, placeholders: a word is a change, however small on a long page) or, past the ids a framework hands out in order (`id`, `for`, `aria-controls` and the like move when anything before them does), its picture differs by more than a few pixels at half size. A picture that differs only by rendering, with the page the same, never counts; such a frame keeps its committed pictures, so a snapshot of nothing new changes no file in the repo.
+- **What an entry says:** the date and the newest commit (every commit since the last frames, when there's more than one); a summary, the commits' subjects without their `feat(…):` (or `--summary`); its source, a `Source:`, `Asked-by:` or `Requested-by:` trailer, or failing that the tickets the commits name (or `--source`).
+- **Its kinds:** states that look different; the whole board, when at least 60% of a board's states (and at least five) changed at once, so a shared header is one entry and not forty; new states; states whose rules (or their lane's) changed, marked as a rule.
+- **Run twice for one commit**, its entries are replaced, not added again.
+- **`kanvas diff`** says the same without writing: what looks different, what's new, whose rules changed, what's gone, and what was written differently but looks the same.
+- **`kanvas check`** opens every scene and plays its steps, without freezing or writing, finds each section, and checks every arrow points at a state on its board; it exits 1 when something can't be reached, for CI.
+- **The clock holds for the config as it loads, too.** A config whose clock is imported from another file is read once on the side for its clock and time zone, then loaded at them, so a date worked out as it loads ("in forty days") doesn't move when the day does. (Found because a test ran across midnight.)
+
+Tested in a throwaway repo on the first app's plan board: the first frames as one board entry; a commit that changed a field's text and wrote two rules as two entries, the text change and the rule (`Source:` read from the commit); a commit that hid the header on all 39 frames as one board entry, its source the ticket in its subject; `log` run twice adding nothing; a snapshot with nothing new changing no file; `check` passing, then failing with exit 1 and the step named once a step's button was renamed. The drawers show each frame's and lane's entries, marked Whole board, New or Rule.
 
 ## Decided (2026-11-24)
 

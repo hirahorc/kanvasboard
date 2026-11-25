@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
 import { Assets } from "./assets.js";
@@ -136,7 +136,7 @@ export async function openScene(browser: Browser, config: KanvasConfig, scene: S
 }
 
 /** one scene at one device: its picture, a small one, and its frozen page, written under `out` */
-async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, device: Device, out: string, assets: Assets): Promise<FrameRecord> {
+async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, device: Device, out: string, assets: Assets, was?: FrameRecord): Promise<FrameRecord> {
   const view = viewKind(scene.view);
   const opened = await openScene(browser, config, scene, device);
   const { context, page } = opened;
@@ -189,10 +189,16 @@ async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, dev
     const html = await assemble(frozen, device, assets);
 
     const id = frameId(scene.id, device.id);
+    const htmlHash = sha1(html);
     mkdirSync(join(out, "frames"), { recursive: true });
     writeFileSync(join(out, "frames", `${id}.html`), html);
-    writeFileSync(join(out, "frames", `${id}.png`), png);
-    writeFileSync(join(out, "frames", `${id}.thumb.webp`), thumb);
+    // the same page as last time keeps last time's pictures: rendering isn't byte-exact,
+    // and a picture rewritten for nothing would be a change in the app's repo for nothing
+    const kept = !!was && was.htmlHash === htmlHash && was.error === error && !!was.png && existsSync(join(out, was.png)) && (!was.thumb || existsSync(join(out, was.thumb)));
+    if (!kept) {
+      writeFileSync(join(out, "frames", `${id}.png`), png);
+      writeFileSync(join(out, "frames", `${id}.thumb.webp`), thumb);
+    }
     return {
       scene: scene.id,
       device: device.id,
@@ -202,8 +208,8 @@ async function snapOne(browser: Browser, config: KanvasConfig, scene: Scene, dev
       html: `frames/${id}.html`,
       png: `frames/${id}.png`,
       thumb: `frames/${id}.thumb.webp`,
-      htmlHash: sha1(html),
-      pngHash: sha1(png),
+      htmlHash,
+      pngHash: kept ? was!.pngHash : sha1(png),
       ...(frozen.fallback.length ? { fallback: frozen.fallback } : {}),
       ...(error ? { error } : {}),
     };
@@ -276,6 +282,8 @@ export async function snap(o: SnapOptions): Promise<{ manifest: Manifest; done: 
   );
   log(`${jobs.length} frame${jobs.length === 1 ? "" : "s"}: ${scenes.length} scene${scenes.length === 1 ? "" : "s"} at ${[...new Set(jobs.map((j) => j.device.id))].join(", ")}`);
 
+  // what's there already: a frame whose page is the same keeps its pictures
+  const was = readManifest(out);
   const browser = await launch(o.browser);
   const assets = new Assets(join(out, "assets"));
   const done: FrameRecord[] = [];
@@ -287,7 +295,7 @@ export async function snap(o: SnapOptions): Promise<{ manifest: Manifest; done: 
       const id = frameId(job.scene.id, job.device.id);
       const t0 = Date.now();
       try {
-        const rec = await snapOne(browser, config, job.scene, job.device, out, assets);
+        const rec = await snapOne(browser, config, job.scene, job.device, out, assets, was?.frames[id]);
         done.push(rec);
         if (rec.error) failed.push(rec);
         const note = rec.error ? `  ✗ ${rec.error}` : rec.fallback ? `  (shown as its picture: ${rec.fallback.join(", ")})` : "";
@@ -306,7 +314,6 @@ export async function snap(o: SnapOptions): Promise<{ manifest: Manifest; done: 
   }
 
   // what this run didn't snap stays as it was, while its scene is still in the config
-  const was = readManifest(out);
   const shape = describe(config);
   const frames: Record<string, FrameRecord> = {};
   for (const [k, f] of Object.entries(was?.frames ?? {})) if (shape.scenes[f.scene]) frames[k] = f;

@@ -48,6 +48,7 @@ function Changes({ entries }: { entries: (ChangeEntry & { wide: boolean })[] }) 
             <time dateTime={e.date}>{day(e.date)}</time>
             {e.commit && <code>{e.commit.slice(0, 7)}</code>}
             {e.wide && <span className="k-pill">Whole board</span>}
+            {e.added && <span className="k-pill">New</span>}
             {e.rule && <span className="k-pill">Rule</span>}
           </p>
           <p>{e.summary}</p>

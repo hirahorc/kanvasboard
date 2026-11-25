@@ -1,8 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 import { frameId, readManifest } from "./manifest.js";
+import { compare } from "./pixels.js";
 import { serve } from "./serve.js";
 import { launch } from "./snap.js";
 
@@ -63,31 +63,8 @@ export async function verify(o: { out: string; scenes?: string[]; devices?: stri
               : await page.screenshot({ ...shot, fullPage: true });
         const a = PNG.sync.read(readFileSync(join(o.out, f.png)));
         const b = PNG.sync.read(png);
-        const w = Math.min(a.width, b.width);
-        const h = Math.min(a.height, b.height);
-        const crop = (p: PNG) => {
-          if (p.width === w && p.height === h) return p.data;
-          const c = Buffer.alloc(w * h * 4);
-          for (let y = 0; y < h; y++) p.data.copy(c, y * w * 4, y * p.width * 4, y * p.width * 4 + w * 4);
-          return c;
-        };
-        // compared at half size: text smoothed one way on a GPU layer and another
-        // way off it differs pixel by pixel and not to the eye; what's left is seen
-        const half = (d: Buffer) => {
-          const out = Buffer.alloc(hw * hh * 4);
-          for (let y = 0; y < hh; y++)
-            for (let x = 0; x < hw; x++)
-              for (let ch = 0; ch < 4; ch++) {
-                const at = (yy: number, xx: number) => d[(yy * w + xx) * 4 + ch]!;
-                out[(y * hw + x) * 4 + ch] = (at(2 * y, 2 * x) + at(2 * y, 2 * x + 1) + at(2 * y + 1, 2 * x) + at(2 * y + 1, 2 * x + 1)) >> 2;
-              }
-          return out;
-        };
-        const hw = w >> 1;
-        const hh = h >> 1;
-        const diff = new PNG({ width: hw, height: hh });
-        const n = pixelmatch(half(crop(a)), half(crop(b)), diff.data, hw, hh, { threshold: 0.1 });
-        const ratio = n / (hw * hh);
+        const { ratio, diff } = compare(a, b);
+        const n = Math.round(ratio * diff.width * diff.height);
         const size = a.width !== b.width || a.height !== b.height ? `${a.width}×${a.height} live vs ${b.width}×${b.height} frozen` : undefined;
         if (n > 0) writeFileSync(join(diffDir, `${id}.png`), PNG.sync.write(diff));
         if (n > 0 || size) writeFileSync(join(diffDir, `${id}.frozen.png`), png);
