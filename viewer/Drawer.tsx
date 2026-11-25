@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { copiedOn, frameImage, laneImage, toClipboard } from "./copy";
-import { KIND_LABEL, changesOf, day, frameOf, isGap, routeHash, type Board, type ChangeEntry, type Data, type Kind } from "./data";
+import { KIND_LABEL, changesOf, day, frameOf, isGap, liveUrl, routeHash, type Board, type ChangeEntry, type Data, type Kind } from "./data";
 
 interface Props {
   data: Data;
@@ -93,6 +93,9 @@ export function Drawer({ data, board, device, scene, lane, onPick, onClose }: Pr
     const f = frameOf(manifest, scene, device);
     // what it follows: a scene (a link to its frame) or a state not built yet (its name)
     const fromScene = place?.from && manifest.scenes[place.from] ? place.from : undefined;
+    // it may be on another board (the overview borrows states): then the link goes there
+    const onBoard = (b: Board, id: string) => b.lanes.some((l) => l.rows.some((r) => r.cells.some((c) => !isGap(c) && c.scene === id)));
+    const fromBoard = fromScene ? (onBoard(board, fromScene) ? board.id : manifest.boards.find((b) => onBoard(b, fromScene))?.id) : undefined;
     const fromTitle = (() => {
       if (!place?.from) return undefined;
       if (fromScene) return manifest.scenes[fromScene]!.title;
@@ -140,6 +143,10 @@ export function Drawer({ data, board, device, scene, lane, onPick, onClose }: Pr
                 return "Opening in a browser…";
               }}
             />
+          ) : s && liveUrl(manifest, s.path, scene) ? (
+            <a className="k-act" href={liveUrl(manifest, s.path, scene)} target="_blank" rel="noopener">
+              Open live ↗
+            </a>
           ) : (
             <p className="k-quiet k-hint">
               Open live: <code>kanvas open {scene}</code> on your machine
@@ -155,7 +162,11 @@ export function Drawer({ data, board, device, scene, lane, onPick, onClose }: Pr
                 {fromTitle && (
                   <>
                     {s?.via ? ", from " : "From "}
-                    {fromScene ? (
+                    {fromScene && fromBoard && fromBoard !== board.id ? (
+                      <a className="k-link" href={routeHash({ board: fromBoard, scene: fromScene, device })}>
+                        {fromTitle}
+                      </a>
+                    ) : fromScene ? (
                       <button type="button" className="k-link" onClick={() => onPick({ scene: fromScene })}>
                         {fromTitle}
                       </button>

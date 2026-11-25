@@ -107,7 +107,7 @@ What the prototype's canvas does well, kept:
 | 1 | Runner: the config settles; `snap` with the three kinds of frame, the frozen clock, the PNG fallback | Done (2026-11-24), see "Phase 1" below |
 | 2 | Viewer: board, lanes, rows, arrows, devices, placeholders, zoom levels, the frame and lane drawers (rules, note, copy image and link, open live) | Done (2026-11-24), see "Phase 2" below |
 | 3 | `diff`, `log` and `check`: the changelog from git, board-level entries, rule changes | Done (2026-11-25), see "Phase 3" below |
-| 4 | The first app moves over (section 6) | The first app's `/canvas` is kanvas, updated on every commit to main |
+| 4 | The first app moves over (section 6) | Built (2026-11-25), see "Phase 4" below |
 | 5 | `init` and the agent instructions, a second app (a vibe-coded one), docs, the npm name, a licence, publish | Someone else sets it up without help |
 
 ## Phase 1: the runner (done 2026-11-24)
@@ -164,6 +164,14 @@ git add kanvas && git commit -m "chore(kanvas): frames for …"
 - **The clock holds for the config as it loads, too.** A config whose clock is imported from another file is read once on the side for its clock and time zone, then loaded at them, so a date worked out as it loads ("in forty days") doesn't move when the day does. (Found because a test ran across midnight.)
 
 Tested in a throwaway repo on the first app's plan board: the first frames as one board entry; a commit that changed a field's text and wrote two rules as two entries, the text change and the rule (`Source:` read from the commit); a commit that hid the header on all 39 frames as one board entry, its source the ticket in its subject; `log` run twice adding nothing; a snapshot with nothing new changing no file; `check` passing, then failing with exit 1 and the step named once a step's button was renamed. The drawers show each frame's and lane's entries, marked Whole board, New or Rule.
+
+## Phase 4: The first app moves over (built 2026-11-25)
+
+- `kanvas.config.ts` at the first app's root reads the scenes that stay in its own canvas code (seeds, steps, lanes, tickets): one source for the frames and for opening a scene live. It imports nothing from kanvas, so the app builds where kanvas isn't installed; `npm run kanvas` runs `../kanvas/dist/cli.js` until kanvas is published.
+- The board's site is the first app's `public/canvas` (`out` and `build` both there), committed and served as the app's own files: 154 frames, about 48 MB. `/canvas` redirects to `/canvas/index.html`, and an old `/canvas/<board>#<scene>` link to `?board=<board>` with its hash, which the viewer reads.
+- Open live on the deployed board: The first app already opens a scene by itself (`?scene=<id>`), so its config says `live: { query: "scene" }` and the board links there; the old in-app scene mode stays for that, while the old live-iframe board and its scene checker are gone. A generic in-page player for apps that can't do this is left for later.
+- New in kanvas for it: `site` and `live` in the config, page links from the board's bar, a link to a state on another board (the overview borrows states), frames marked noindex, and `check` accepting a state that follows one on another board.
+- `check` passes on all 77 scenes at both widths; `snap` made all 154 frames; `/canvas`, an old link, Open live into scene mode and back, and the prototype's switch were each opened on the running app.
 
 ## Decided (2026-11-24)
 

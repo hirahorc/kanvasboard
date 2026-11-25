@@ -193,7 +193,8 @@
           continue;
         case "meta": {
           const eq = (o.getAttribute("http-equiv") || "").toLowerCase();
-          if (o.hasAttribute("charset") || eq === "refresh" || eq === "content-security-policy") drop.push(c);
+          const name = (o.getAttribute("name") || "").toLowerCase();
+          if (o.hasAttribute("charset") || name === "robots" || eq === "refresh" || eq === "content-security-policy") drop.push(c);
           break;
         }
         case "img": {
@@ -273,6 +274,11 @@
     const slot = document.createElement("style");
     slot.setAttribute("data-kanvas-css", "");
     head.insertBefore(slot, head.firstChild);
+    // a frame is a picture of a page, never a page to find
+    const robots = document.createElement("meta");
+    robots.setAttribute("name", "robots");
+    robots.setAttribute("content", "noindex");
+    head.insertBefore(robots, head.firstChild);
     const charset = document.createElement("meta");
     charset.setAttribute("charset", "utf-8");
     head.insertBefore(charset, head.firstChild);

@@ -153,8 +153,9 @@ export function readChangelog(out: string): Changelog {
  * The changelog's entries for a fresh snapshot, from the commits since the
  * frames were last committed: what looks different, by scene, or by board
  * when most of a board changed at once (a shared header, a colour); what's
- * new; whose rules changed. Run again for the same commit, its entries are
- * replaced, not added twice.
+ * new; whose rules changed. They go on top of the changelog as committed, so
+ * running it again (for the same commit, or after committing the code it
+ * answers to) replaces what an earlier run wrote instead of adding to it.
  */
 export function log(o: { out: string; ref?: string; summary?: string; source?: string }): { entries: ChangeEntry[]; diff: Diff } {
   const { diff: d, before, now, at } = diff(o);
@@ -190,7 +191,10 @@ export function log(o: { out: string; ref?: string; summary?: string; source?: s
     if (d.rules.length) entries.push({ ...base, ...said, scenes: d.rules, rule: true });
   }
 
-  const changelog = readChangelog(o.out);
+  // on top of the changelog as committed, not as it lies here: what an earlier run left
+  // uncommitted (for a commit since amended, or before the code it answers to was committed) goes
+  const committed = fileAt(at.repo, ref, `${at.path}/changelog.json`);
+  const changelog = committed ? (JSON.parse(committed.toString()) as Changelog) : { kanvas: 1 as const, entries: [] };
   const mine = head?.hash;
   const kept = mine ? changelog.entries.filter((e) => e.commit !== mine) : changelog.entries;
   writeFileSync(join(o.out, "changelog.json"), `${JSON.stringify({ kanvas: 1, entries: [...entries, ...kept] }, null, 2)}\n`);

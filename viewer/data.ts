@@ -45,7 +45,16 @@ export interface Route {
   lane?: string;
 }
 
-export function readRoute(hash = location.hash): Route {
+export function readRoute(hash = location.hash, search = location.search): Route {
+  if (hash && !hash.startsWith("#/")) {
+    // a link from before kanvas: `?board=<id>`, with the scene it was at as the hash
+    const q = new URLSearchParams(search);
+    return { board: q.get("board") ?? undefined, scene: decodeURIComponent(hash.slice(1)) || undefined, device: q.get("device") ?? undefined };
+  }
+  if (!hash) {
+    const q = new URLSearchParams(search);
+    if (q.get("board")) return { board: q.get("board")!, device: q.get("device") ?? undefined };
+  }
   const [path = "", device] = hash.replace(/^#\/?/, "").split("@");
   const [board, pick] = path.split("/").map(decodeURIComponent);
   if (!pick) return { board: board || undefined, device };
@@ -56,6 +65,15 @@ export function routeHash(r: Route): string {
   const pick = r.scene ? `/${encodeURIComponent(r.scene)}` : r.lane ? `/lane:${encodeURIComponent(r.lane)}` : "";
   return `#/${encodeURIComponent(r.board ?? "")}${pick}${r.device ? `@${r.device}` : ""}`;
 }
+
+/* ------------------------------------------------------------ the app's pages */
+
+/** a page of the app, from the board: on this machine (kanvas view) at the running app, else where the config says it's deployed */
+export const pageUrl = (m: Manifest, live: boolean, path: string) => `${live ? m.baseUrl : (m.site ?? "")}${path}`;
+
+/** a scene opened by the deployed app itself, when it can (KanvasConfig.live) */
+export const liveUrl = (m: Manifest, path: string, scene: string) =>
+  m.live ? `${m.site ?? ""}${path}${path.includes("?") ? "&" : "?"}${m.live.query}=${encodeURIComponent(scene)}` : undefined;
 
 /* -------------------------------------------------------------- the changes */
 

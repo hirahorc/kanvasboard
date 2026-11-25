@@ -35,6 +35,10 @@ export interface Manifest {
   kanvas: 1;
   baseUrl: string;
   clock: string;
+  /** where the app's pages are for the built board's links (KanvasConfig.site) */
+  site?: string;
+  /** how the deployed app opens a scene by itself (KanvasConfig.live) */
+  live?: { query: string };
   devices: Device[];
   boards: {
     id: string;

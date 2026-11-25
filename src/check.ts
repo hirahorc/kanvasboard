@@ -6,19 +6,19 @@ import { locate, say } from "./target.js";
 /**
  * Whether every scene can still be reached: each opened at each device and
  * its steps played (nothing frozen, nothing written), its section found, and
- * every arrow pointing at a state that's on its board. For CI: it fails when
+ * every state it follows on some board. For CI: it fails when
  * one can't, so a broken scene is caught at the commit, not on the board.
  */
 export async function check(o: { config: KanvasConfig; boards?: string[]; scenes?: string[]; devices?: string[]; browser?: string; concurrency?: number; log?: (l: string) => void }): Promise<string[]> {
   const log = o.log ?? (() => {});
   const problems: string[] = [];
 
-  for (const b of o.config.boards) {
-    const ids = new Set(b.lanes.flatMap((l) => l.rows.flatMap((r) => r.scenes.map((s) => s.id))));
+  // a state may follow one on another board (the overview borrows them); it must follow one that's somewhere
+  const ids = new Set(o.config.boards.flatMap((b) => b.lanes.flatMap((l) => l.rows.flatMap((r) => r.scenes.map((s) => s.id)))));
+  for (const b of o.config.boards)
     for (const l of b.lanes)
       for (const r of l.rows)
-        for (const s of r.scenes) if (s.from && !ids.has(s.from)) problems.push(`${b.id}: ${s.id} follows "${s.from}", which isn't on the board`);
-  }
+        for (const s of r.scenes) if (s.from && !ids.has(s.from)) problems.push(`${b.id}: ${s.id} follows "${s.from}", which is on no board`);
 
   let scenes = scenesOf(o.config, o.boards);
   if (o.scenes?.length) scenes = scenes.filter((s) => o.scenes!.includes(s.id));

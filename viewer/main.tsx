@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Board, type BoardControls } from "./Board";
 import { Drawer } from "./Drawer";
 import { Side } from "./Side";
-import { load, readRoute, routeHash, type Data, type Route } from "./data";
+import { load, pageUrl, readRoute, routeHash, type Data, type Route } from "./data";
 import "./styles.css";
 
 const DEVICE_KEY = "kanvas:device";
@@ -64,7 +64,11 @@ function App() {
             Boards
           </button>
           <h1>{board.title}</h1>
-          {board.path && <code className="k-path">{board.path}</code>}
+          {board.path && (
+            <a className="k-path" href={pageUrl(manifest, data.live, board.path)} target="_blank" rel="noopener" title="The page itself">
+              {board.path} ↗
+            </a>
+          )}
           <div className="k-bar-end">
             <div className="k-seg" role="group" aria-label="Screen size">
               {manifest.devices.map((d) => (

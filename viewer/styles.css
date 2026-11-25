@@ -112,6 +112,17 @@ code,
 }
 .k-path {
   color: var(--k-muted);
+  font-family: var(--k-mono);
+  font-size: var(--k-t-s);
+  text-decoration: none;
+}
+.k-path:hover {
+  color: var(--k-accent);
+  text-decoration: underline;
+}
+a.k-act {
+  color: inherit;
+  text-decoration: none;
 }
 .k-bar-end {
   display: flex;

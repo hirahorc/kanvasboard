@@ -318,7 +318,7 @@ export async function snap(o: SnapOptions): Promise<{ manifest: Manifest; done: 
   const frames: Record<string, FrameRecord> = {};
   for (const [k, f] of Object.entries(was?.frames ?? {})) if (shape.scenes[f.scene]) frames[k] = f;
   for (const f of done) frames[frameId(f.scene, f.device)] = f;
-  const manifest: Manifest = { kanvas: 1, baseUrl: config.baseUrl, clock: config.clock, devices: config.devices, ...shape, frames };
+  const manifest: Manifest = { kanvas: 1, baseUrl: config.baseUrl, clock: config.clock, ...(config.site ? { site: config.site } : {}), ...(config.live ? { live: config.live } : {}), devices: config.devices, ...shape, frames };
   writeManifest(out, manifest);
   return { manifest, done, failed };
 }

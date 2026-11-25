@@ -156,6 +156,18 @@ export interface KanvasConfig {
   boards: Board[];
   /** where frames, assets and the manifest are written (default "kanvas") */
   out?: string;
+  /**
+   * Where the app's pages are for someone looking at the built board, for its
+   * links to them (default: the board's own site, as when the board is served
+   * beside the app). `kanvas view` links to `baseUrl` instead.
+   */
+  site?: string;
+  /**
+   * How a deployed app opens a scene by itself, if it can: a query parameter
+   * it reads (e.g. { query: "scene" } for `/plan?scene=elig-abroad`). With it,
+   * "Open live" works on the built board too, not only from `kanvas view`.
+   */
+  live?: { query: string };
   /** CSS selectors hidden in every frame: a dev badge, a cookie banner */
   hide?: string[];
   /** open pages with reduced motion, so what animates in is simply there (default true) */
